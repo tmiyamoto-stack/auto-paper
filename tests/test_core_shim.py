@@ -9,20 +9,24 @@ import os
 import pytest
 
 import core
+from conftest import requires_core
 
 
+@requires_core
 def test_resolves_real_core():
     path = core.resolve_core()
     assert os.path.isdir(path)
     assert os.path.exists(os.path.join(path, "audit", "tier1", "runner.py"))
 
 
+@requires_core
 def test_core_is_importable_after_ensure():
     core.ensure_core_importable()
     from audit.tier1.runner import run_tier1_generic  # noqa: F401
     from pipeline.profile_data import profile_csv  # noqa: F401
 
 
+@requires_core
 def test_ensure_is_idempotent():
     import sys
     p1 = core.ensure_core_importable()
@@ -32,6 +36,7 @@ def test_ensure_is_idempotent():
     assert sys.path.count(p1) == n1
 
 
+@requires_core
 def test_explicit_path_wins(tmp_path):
     """明示指定が最優先されること。"""
     real = core.resolve_core()
@@ -90,6 +95,7 @@ def test_invalid_explicit_arg_does_not_fall_back(tmp_path):
     assert "明示指定" in str(e.value)
 
 
+@requires_core
 def test_valid_env_core_is_used(monkeypatch):
     real = core.resolve_core()
     monkeypatch.setenv("AUTO_PAPER_CORE", real)
@@ -144,6 +150,7 @@ def test_ambiguous_cores_fail_closed(tmp_path, monkeypatch):
 
 # --- コアとの契約（M4: コア変更の検知） --------------------------------------
 
+@requires_core
 def test_core_accepts_every_kwarg_the_driver_passes():
     """ドライバが渡す kwargs をコアの run_tier1_generic が全て受理すること。
 

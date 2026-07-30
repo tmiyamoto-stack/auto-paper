@@ -22,3 +22,13 @@ def core_available() -> bool:
         return True
     except Exception:
         return False
+
+
+def _requires_core_marker():
+    import pytest
+    return pytest.mark.skipif(
+        not core_available(),
+        reason="隣接する監査コアが無い（単体クローン）。skills 配下にコアを置くと実行される")
+
+
+requires_core = _requires_core_marker()
