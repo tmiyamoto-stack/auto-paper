@@ -16,7 +16,11 @@ import pytest
 
 import core
 import domain as d
-from conftest import FIXTURES
+from conftest import FIXTURES, core_available
+
+if not core_available():
+    pytest.skip("隣接する監査コアが無い（単体クローン）。skills 配下にコアを置くと実行される",
+                allow_module_level=True)
 
 core.ensure_core_importable()
 

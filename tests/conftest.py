@@ -7,3 +7,18 @@ if SKILL_ROOT not in sys.path:
     sys.path.insert(0, SKILL_ROOT)
 
 FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
+
+
+def core_available() -> bool:
+    """共有監査コアを解決できるか。
+
+    本スキルを単体でクローンした場合（skills 配下にコアが無い）はコアに依存する
+    テストを実行できない。README のとおりコアを持つスキルと同じディレクトリに
+    置けば実行される。欠陥ではないので fail ではなく skip にする。
+    """
+    import core
+    try:
+        core.resolve_core()
+        return True
+    except Exception:
+        return False
