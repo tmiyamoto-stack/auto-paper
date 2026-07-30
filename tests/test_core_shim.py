@@ -99,9 +99,14 @@ def test_valid_env_core_is_used(monkeypatch):
 # --- コアの特定は名前ではなく構造で行う -------------------------------------
 
 def test_discovery_finds_core_by_structure():
-    """ディレクトリ名に依存せず、必須ファイル一式の有無でコアを見つける。"""
+    """ディレクトリ名に依存せず、必須ファイル一式の有無でコアを見つける。
+
+    本スキルを単体でクローンした場合（隣にコアが無い）は検証不能なのでスキップする。
+    README のとおり、コアを持つスキルと同じ skills ディレクトリに置く必要がある。
+    """
     found = core.discover_cores()
-    assert len(found) >= 1
+    if not found:
+        pytest.skip("隣接するコアが無い（単体クローン）。skills 配下にコアを置くと実行される")
     for p in found:
         assert core.is_core(p)
 
@@ -114,6 +119,8 @@ def test_resolution_works_without_configured_name(monkeypatch):
     """config が名前を持たなくても（core_skill_path=null）解決できる。"""
     monkeypatch.delenv("AUTO_PAPER_CORE", raising=False)
     monkeypatch.setattr(core, "_config_core_path", lambda: None)
+    if not core.discover_cores():
+        pytest.skip("隣接するコアが無い（単体クローン）")
     assert core.is_core(core.resolve_core())
 
 
