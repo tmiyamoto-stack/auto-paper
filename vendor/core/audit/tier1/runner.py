@@ -25,8 +25,18 @@ from .check_t_cluster import check_t_cluster
 from .check_p_prereg import check_p_prereg
 from .check_q_model import check_q_model
 from .check_r_model_spec import check_r_model_spec
+from .check_x_reference_contamination import check_x_reference_contamination
+from .check_y_number_provenance import check_y_number_provenance
 from .check_e_mechanism import check_e_declared_vs_implemented
 from .findings import CoverageProof, Finding, Status, Severity
+
+
+# study_design が参照/対照/pre-period 群を本質的に要する設計。これらの宣言下で
+# reference_groups が未供給なら、check X を fail-closed で INCOMPLETE にする（Fable 指摘 C-1）。
+_REFERENCE_DESIGNS = frozenset({
+    "event_study", "did", "difference_in_differences",
+    "dose_response", "case_control", "self_controlled",
+})
 
 
 def _sha256(path: str) -> str:
@@ -175,7 +185,9 @@ def _run_optional_checks(findings: list, coverage: list,
 
 def _run_inference_checks(findings: list, coverage: list,
                           inference: dict | None,
-                          style_sections: dict | None) -> None:
+                          style_sections: dict | None,
+                          study_design: str | None = None,
+                          section_texts: dict | None = None) -> None:
     """推論頑健性チェック（W: IPW重み / E: 欠測メカニズム / H: パネル脱落）と
     文体サーフェシング（S）のオプション配線。
 
@@ -301,6 +313,57 @@ def _run_inference_checks(findings: list, coverage: list,
             incomplete=[] if (specs and impls) else ["model_specs_or_implementations"],
             rule_id="t1.model.spec_correspondence", taxonomy_id="B"))
 
+    # X（参照群/対照群の汚染）: 非曝露参照・pre-period に曝露済み観測が混入していないか。
+    # check_b/check_r は「宣言どおりの手続き/式か」を見るが、比較の参照側の構成は見ない
+    # （経済ショック event study の pre-trend ビンに 30.7% 曝露混入、加熱式タバコ頻度解析の
+    # 272 person-wave 曝露者混入を、既存規則のどれも検出できなかった）。
+    # fail-closed tripwire（Fable 指摘 C-1）: study_design が参照/対照を要する設計なのに
+    # reference_groups 未供給なら、汚染検査が「実行されていない」ことを CRITICAL INCOMPLETE で
+    # 可視化する（check R が旧専用スクリプトで機構を迂回され第3例を許した失敗の再発防止）。
+    ref_groups = inference.get("reference_groups")
+    if ref_groups is not None:
+        findings += check_x_reference_contamination(ref_groups)
+        coverage.append(CoverageProof(
+            "X", files_read=[],
+            items_checked=sorted(g.get("id", "") for g in ref_groups) if ref_groups else [],
+            incomplete=[] if ref_groups else ["reference_groups"],
+            rule_id="t1.contamination.reference_group", taxonomy_id="I"))
+    elif study_design in _REFERENCE_DESIGNS:
+        findings.append(Finding(
+            "X", Status.INCOMPLETE, Severity.CRITICAL,
+            f"参照設計（study_design={study_design}）の宣言下で reference_groups が未供給",
+            "参照/対照/pre-period を持つ設計だが汚染検査の入力が無い＝検査が実行されていない",
+            rule_id="t1.contamination.reference_group", taxonomy_id="I"))
+        coverage.append(CoverageProof(
+            "X", files_read=[], incomplete=["reference_groups"],
+            rule_id="t1.contamination.reference_group", taxonomy_id="I"))
+
+    # Y（原稿数値の由来照合）: 掲載された数値が results に遡れるか。プレースホルダ・レンダを
+    # 経ない手書き数値（Table 4 脚注の stale な交互作用 p 値 0.64/0.42 等）は、既存の数値照合が
+    # 「原稿側に results に無い数値が紛れ込む」向きを見ないため素通りしていた。
+    # fail-closed tripwire（Fable 指摘 C-1）: 原稿の存在は section_texts の供給で機械的に判る。
+    # 原稿があるのに数値由来照合の入力が無ければ CRITICAL INCOMPLETE（手書き数値のサイレント
+    # PASS を、宣言ではなく「原稿があるという事実」からコードで required 化する）。
+    reported_nums = inference.get("reported_numbers")
+    results_vals = inference.get("results_values")
+    if reported_nums is not None or results_vals is not None:
+        findings += check_y_number_provenance(reported_nums, results_vals)
+        coverage.append(CoverageProof(
+            "Y", files_read=[],
+            items_checked=[r.get("location", "") for r in reported_nums] if reported_nums else [],
+            incomplete=[] if (reported_nums and results_vals is not None)
+            else ["reported_numbers_or_results_values"],
+            rule_id="t1.manuscript.number_provenance", taxonomy_id="C"))
+    elif section_texts is not None:
+        findings.append(Finding(
+            "Y", Status.INCOMPLETE, Severity.CRITICAL,
+            "原稿（section_texts 供給）が存在するのに数値由来照合の入力が未供給",
+            "reported_numbers / results_values が無い＝掲載数値の由来照合が実行されていない",
+            rule_id="t1.manuscript.number_provenance", taxonomy_id="C"))
+        coverage.append(CoverageProof(
+            "Y", files_read=[], incomplete=["reported_numbers_or_results_values"],
+            rule_id="t1.manuscript.number_provenance", taxonomy_id="C"))
+
     # S（文体サーフェシング, MINOR・非ブロック）: 明示供給時のみ実行。
     if style_sections is not None:
         findings += check_s_style(style_sections)
@@ -384,7 +447,8 @@ def run_tier1(codebook_path: str, dict_csv_path: str,
                          section_texts, study_design,
                          sample_type, limitations_text)
 
-    _run_inference_checks(findings, coverage, inference, style_sections)
+    _run_inference_checks(findings, coverage, inference, style_sections,
+                          study_design=study_design, section_texts=section_texts)
 
     return {"findings": findings, "coverage": coverage, "critical_fail": _critical_fail(findings)}
 
@@ -472,6 +536,7 @@ def run_tier1_generic(codebook_path: str, data_csv_path: str,
                          section_texts, study_design,
                          sample_type, limitations_text)
 
-    _run_inference_checks(findings, coverage, inference, style_sections)
+    _run_inference_checks(findings, coverage, inference, style_sections,
+                          study_design=study_design, section_texts=section_texts)
 
     return {"findings": findings, "coverage": coverage, "critical_fail": _critical_fail(findings)}

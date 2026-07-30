@@ -190,6 +190,16 @@ RULES: tuple[CheckRule, ...] = (
               "AI 定型表現の所在 surfacing（文体改善候補）", "check_s_style",
               "surfacing", Severity.MINOR, "manuscript", ("jastis", "generic"),
               ("section_texts",)),
+    CheckRule("t1.contamination.reference_group", "X", "I",
+              "参照/対照群の汚染（非曝露参照・pre-period に曝露済みが混入）",
+              "check_x_reference_contamination",
+              "deterministic", Severity.CRITICAL, "reference_design", ("jastis", "generic"),
+              ("reference_groups",)),
+    CheckRule("t1.manuscript.number_provenance", "Y", "C",
+              "原稿掲載数値の由来照合（results に遡れない手書き/stale の検出）",
+              "check_y_number_provenance",
+              "deterministic", Severity.CRITICAL, "manuscript", ("jastis", "generic"),
+              ("reported_numbers", "results_values")),
 )
 
 

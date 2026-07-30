@@ -90,44 +90,45 @@ python3 run_audit.py --run-dir <run> --domain clinical --data-csv data.csv --jso
 git clone https://github.com/tmiyamoto-stack/auto-paper.git ~/.claude/skills/auto-paper
 ```
 
-### A. 監査だけ回す（最頻用）
+### A. 通しで英語論文まで書かせる（メイン）
 
 ```
-auto-paper スキルで解析成果物を監査してください。
-
-  cd ~/.claude/skills/auto-paper
-  python3 run_audit.py --run-dir <成果物ディレクトリ> --domain general --data-csv <CSV> --json findings.json
-
-- domain は clinical / survey / general から必ず明示（省略すると exit 2 で止まる）
-- 終了コードを区別して報告: 0=指摘なし / 1=FAIL・INCOMPLETE あり / 2=監査を実行できなかった
-- 「未実行チェック（入力未供給）」は合格ではなく「そのチェックが走っていない」という意味。
-  何を用意すれば走るかを出力から拾って一覧にしてください。
-```
-
-### B. データから一式作る（RQ → ドラフト）
-
-```
-auto-paper スキルで、下記データから論文/レポートのドラフトを作ってください。
+auto-paper スキルで、下記データから英語の論文原稿を作ってください。
 
 - データ: <CSVパス>
 - リサーチクエスチョン: <問い>
-- ドメイン: clinical / survey / general
+- ドメイン: clinical / survey / general のいずれか
+- 投稿先の規定（あれば）: 本文<N>語 / 抄録<N>語
 
-~/.claude/skills/auto-paper/agents/ の工程プロンプトに従って進めてください。
+~/.claude/skills/auto-paper/ の SKILL.md と agents/ に従い、工程1→7を進めてください。
 
-  工程1 設計 → 00_spec/sap.md と sap_ranges.json
-        値域(impossible_ranges/plausible_ranges)と単位を必ず宣言すること。
-        宣言しないと check D/U が走らず「未実行」で残ります。
+  工程1 設計   → 00_spec/sap.md と 03_results/sap_ranges.json
+                 値域(impossible_ranges/plausible_ranges)と単位を必ず宣言する。
+                 宣言しないと check D/U が走らず「未実行」で残る。
   ★G0 私の承認を取る（承認なしに工程2へ進まない）
-  工程2 変数 → data_profile.json と variable_codebook.json
-        センチネル候補は必ず treat_as_missing に宣言し、実数値を割り当てない。
-        可能なら user_dictionary.json も書く（検出が INCOMPLETE→確定FAIL に格上げされる）
+  工程2 変数   → 01_data/data_profile.json と variable_codebook.json
+                 センチネル候補は必ず treat_as_missing に宣言し実数値を割り当てない。
+                 可能なら user_dictionary.json も書く（検出が INCOMPLETE→確定FAIL に格上げ）。
   ★G1 私の承認を取る
-  工程3 分析 → results.json / flow.json / methods_claims.json / code_filters.json
-  工程4 執筆 → 数値は全てプレースホルダ（手書き数値は禁止）
-  工程5 監査 → run_audit.py を実走し、終了コードごと報告
+  工程3 分析   → results.json / flow.json / methods_claims.json / code_filters.json
+                 原稿で使う数値は全て results.json に出すこと（無い数値は原稿に書けない）。
+  工程4 執筆   → 04_manuscript/manuscript_en.md（英語・数値は全てプレースホルダ）
+                 templates/manuscript_en.md を骨格に使う。手書き数値は禁止。
+  工程4b 差込  → python3 render_manuscript.py --run-dir <run> --limits '{"body":4000,"abstract":250}'
+                 未解決プレースホルダがあれば exit 2 で原稿は出ない。工程3か原稿側を直す。
+  工程5 監査   → python3 run_audit.py --run-dir <run> --domain <domain> --data-csv <CSV> --json findings.json
+                 終了コードを区別して報告（0/1/2）。未実行チェックは必ず一覧化する。
+  工程6 自己修復 → クリティカルFAILは最早影響工程へ巻き戻す。修正方向は常にSAPへ収束。
+                 コーディング変更なら G1 を再通過。効果推定値が実質変化したら ★G1.5 で私に確認。
+  工程7 ★G2   → 投稿可否は私が判断する。あなたは判断を代行しない。
 
-G0 と G1 は人間の承認ゲートです。そこで必ず止まってください。
+守ること:
+- G0 / G1 は人間の承認ゲート。そこで必ず止まる。
+- 存在を確認していない文献を引かない（bibliography.json に DOI/PMID 付きで登録したものだけ）。
+- 観察研究では因果を含意する語（reduces/prevents/causes）を使わない。
+- 著者名・所属・倫理承認番号・資金源・COI は捏造せず空欄のまま残す。
+- 最終報告では、未解決プレースホルダ数・語数の実測値・監査の終了コード・
+  未実行チェック一覧・人手で残る作業（英文校閲等）を明示する。
 ```
 
 ### C. Tier2/3（Sol・Fable による外部監査）まで回す
@@ -145,12 +146,26 @@ Tier1 の結果を受けて、agents/05_audit.md に従い Tier2/3 監査を実�
 - クリティカルに FAIL か INCOMPLETE が一票でもあれば ESCALATE_HUMAN。統括は覆さない。
 ```
 
+### D. 監査だけ回したいとき
+
+```
+auto-paper スキルで解析成果物を監査してください。
+
+  cd ~/.claude/skills/auto-paper
+  python3 run_audit.py --run-dir <成果物ディレクトリ> --domain general --data-csv <CSV> --json findings.json
+
+- domain は clinical / survey / general から必ず明示（省略すると exit 2 で止まる）
+- 終了コードを区別して報告: 0=指摘なし / 1=FAIL・INCOMPLETE あり / 2=監査を実行できなかった
+- 「未実行チェック（入力未供給）」は合格ではなく「そのチェックが走っていない」という意味。
+  何を用意すれば走るかを出力から拾って一覧にしてください。
+```
+
 ### 相手に必ず伝えること
 
 - **exit 1 が通常。** 入力を揃えるまで未実行チェックが INCOMPLETE で残るため。exit 0 は「全チェックが走って指摘ゼロ」。
 - **exit 2 は不合格ではなく「監査が動かなかった」。** 混同すると設定ミスを検出結果と読み違える。
 - **Tier2/3 は自動では走らない。** `run_audit.py` が回すのは Tier1 のみで、Sol/Fable の起動は統括（Claude）が手順書に従って行う。
-- **英語原稿は出ない。** 翻訳・英文校正は工程外。
+- **英語稿は出るが、英文校閲は工程外。** ネイティブチェックは人手で残る。
 - **check A には偽陰性リスクがある。** 一次ソースが自動プロファイル（ヒューリスティック）なので、取りこぼしの最終防波堤は G1 の人間確認。「機械保証済み」と読ませない。
 - **数値の再現保証は未実装。** 保証は「原稿の数値が `results.json` と一致すること」まで。
 
@@ -189,7 +204,7 @@ python3 -m pytest        # 46 tests
 
 ## 保証範囲外（正直な開示）
 
-- **英語原稿を生成しない。** 執筆エージェントは日本語で、翻訳・英文校正工程は存在しない。
+- **英語原稿は生成するが、英文校閲はしない。** 工程4は英語 IMRaD を出力する。ネイティブ水準の校正工程は存在せず、check S は語彙辞書のマッチであって英文校正の代わりにならない。
 - **数値の再現アサーションは未実装。** 保証しているのは「原稿の数値が `results.json` と一致すること」まで。`results.json` 自体が生データから再現するかは保証しない。
 - **precision は実証されていない。** 新規チェックを足すほど偽陽性が積み上がる構造であり、「達成済み」と述べてはならない。
 - **check A は偽陰性リスクが高い。** 一次ソースが自動データプロファイル（ヒューリスティック）＋任意ユーザー辞書であり、確定した ground truth に照合しているわけではない。取りこぼしの最終防波堤は G1 の人間確認である。

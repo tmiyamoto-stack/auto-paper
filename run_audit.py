@@ -70,6 +70,8 @@ CHECK_REQUIREMENTS = {
     "T": "03_results/sap_ranges.json の inference.cluster",
     "U": "03_results/sap_ranges.json の declared_units と observed_unit_center",
     "W": "03_results/sap_ranges.json の inference.weights（IPW 重みベクトル）",
+    "X": "03_results/sap_ranges.json の inference.reference_groups（参照/対照群の構成。曝露者混入の検出）",
+    "Y": "03_results/sap_ranges.json の inference.reported_numbers と inference.results_values（原稿数値が results に遡れるかの照合）",
 }
 
 

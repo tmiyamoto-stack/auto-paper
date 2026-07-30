@@ -37,11 +37,13 @@
     "audit/tier1/check_t_cluster.py": "82de4a9037f1738a8a760228173960113b5ee9151e864c24c438730635b47de2",
     "audit/tier1/check_u_units.py": "7a600869cacd6679979a43e16e096c0581341b14676793fbd2ad974c665bdb82",
     "audit/tier1/check_w_weights.py": "a353e4440c89cd81bc505e0551fd8f15e78cee9db67f0fd8806259c55893997d",
+    "audit/tier1/check_x_reference_contamination.py": "571d5506ef81134f289bc2011322ed897687c60afd280d4f58fe2cab86674ad8",
+    "audit/tier1/check_y_number_provenance.py": "b2885ae535cec8748150feadb9bd9451df1a9f5e92c05f5cef87536038135a70",
     "audit/tier1/codebook.py": "0d0dcc5d7d806159340512caeb1184d02565b184fbb67b2cfec5ef4dc49a52c0",
     "audit/tier1/data_dictionary.py": "c5be08d16572cf6ca972789e15a75882595ee8634733b03fbc6fe00fd016507c",
     "audit/tier1/findings.py": "9340b4383d2a6766aa53f830da1967d8c4ed9fbfac714d74ba602cba13f6b5d9",
-    "audit/tier1/registry.py": "9cbd330235cf5c7cb62105c50426f80c3f4d3088c7c6be6f37506cebbd6bed16",
-    "audit/tier1/runner.py": "01d11995b3b50666483978403592de3e2425133e4264e1f1c23c3ad51954ed32",
+    "audit/tier1/registry.py": "7bf0c24beb853a1d292dd12ca46d72091a3d867a51d266c5d3f371505999d6b9",
+    "audit/tier1/runner.py": "7b6e601e21aabed7e58e8a74fd8798fac2df4ebe8a8ca0145a51f287df58878f",
     "pipeline/__init__.py": "65d049a9a86938ce566e4867a871cc6a0a118027c092720ea164d64042cb8da4",
     "pipeline/config.py": "c3f4323c1ac777bc629b0aaac1c0d0b570ab1c999d7fdeb0cbef1f496befddec",
     "pipeline/contracts.py": "36453ecdd1ce17f48b7c78a9431d26afe6a38b5840eabec28689c192db6e780c",
@@ -57,8 +59,8 @@
     "pipeline/render.py": "c012b9f95bb7cb2177f7dd937e1f6bfc315e49c30aca650225fd30ccceb6e0df",
     "pipeline/schemas.py": "be6c3af1fd7b4632f1f370836b96a8344def23caddfb2ed220d10fae0d0b9abb"
   },
-  "n_files": 51,
-  "source_commit": "6d70128b4f1d7d15279008a544d064fe4e1dd122",
+  "n_files": 53,
+  "source_commit": "3dc4b8819a5035097aa041f7705221be73c3ae76",
   "subtrees": [
     "audit",
     "pipeline"

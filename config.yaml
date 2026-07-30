@@ -53,7 +53,7 @@
       "primary_source": "data_profile",
       "agents_dir": "agents",
       "_checks_comment": "この checks は run_audit.py が実際に読む。ここに載っていて finding も coverage も出なかったチェックは『入力未供給で未実行』として INCOMPLETE 報告される。",
-      "checks": ["A", "B", "D", "E", "G", "H", "I", "J", "K", "L", "M", "O", "P", "Q", "R", "S", "T", "U", "W"]
+      "checks": ["A", "B", "D", "E", "G", "H", "I", "J", "K", "L", "M", "O", "P", "Q", "R", "S", "T", "U", "W", "X", "Y"]
     }
   }
 }
