@@ -1,11 +1,21 @@
 # -*- coding: utf-8 -*-
 """共有監査コアの解決。
 
-本スキルは監査コア（`audit/`・`pipeline/`）を**複製しない**。コアは別スキルが
-保持する単一の実装を唯一の真実として参照する。したがってコアの検査が改善されれば
-本スキルにも同時に効き、二重管理が発生しない。
+監査コア（`audit/` の決定的チェックと `pipeline/` のスキーマ・プロファイラ）は
+**別スキルが保持する実装が原本**である。本スキルはそれを実行時に解決して読み込む。
 
-本スキルが自前で持つのは次の4つだけである:
+ただし clone しただけで動く必要があるため、原本のコピーを `vendor/core/` に
+**同梱**している（`sync_core.py` が生成）。同梱は「二重管理」を生みやすいので、
+次の2点で原本を唯一の真実に保つ:
+
+  - 解決順序で**原本（隣接スキル）が同梱物より優先**される。手元に原本があれば
+    そちらが使われるので、コアを直せば即座に反映される。
+  - `vendor/PROVENANCE.json` が原本のコミットと全ファイルの sha256 を記録し、
+    `sync_core.py --check` と `tests/test_vendor.py` が改竄・ドリフトを検出する。
+
+**`vendor/core/` を直接編集してはならない。** 原本を編集して再同期すること。
+
+本スキル固有の実装は次の4つだけである:
   - SKILL.md（説明・トリガ）
   - config.yaml（配線）
   - agents/（ドメイン非依存の工程1〜4プロンプト）
@@ -24,6 +34,12 @@ skills ディレクトリを走査して**コアの必須ファイル一式を�
   2. 環境変数 `AUTO_PAPER_CORE`
   3. config.yaml の `core_skill_path`（`~` と相対パスを解決）
   4. 兄弟ディレクトリの構造探索（名前非依存）
+  5. 同梱コア `vendor/core/`（clone しただけで動くための最後の砦）
+
+同梱コアを**最後**に置くのは意図的である。手元に原本（隣接スキル）があるなら
+そちらが勝つべきで、そうしないとコアを直しても同梱物が古いまま使われ続ける。
+同梱物が原本から遅れていないかは `sync_core.py --check --source <原本>` と
+`tests/test_vendor.py` が検証する。
 
 1 と 2 は利用者の明示指定なので、不正なら**フォールバックせず即座に失敗**する。
 指定を無視して別のコアで監査すると、取り違えに気づけないまま「成功」して見える。
@@ -39,6 +55,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.yaml")
+# 同梱コア（clone しただけで動くようにするための vendoring。sync_core.py が生成）
+VENDORED_CORE = os.path.join(HERE, "vendor", "core")
 
 # コアと認めるために存在を要求するファイル（誤ったディレクトリを掴まないため）
 _REQUIRED = (
@@ -124,6 +142,8 @@ def resolve_core(explicit: str | None = None) -> str:
     found = discover_cores()
     if len(found) == 1:
         return found[0]
+    if not found and is_core(VENDORED_CORE):
+        return os.path.abspath(VENDORED_CORE)
     if len(found) > 1:
         raise CoreAmbiguous(
             "共有監査コアの候補が複数見つかり、自動では選べない:\n"
@@ -136,8 +156,10 @@ def resolve_core(explicit: str | None = None) -> str:
         "共有監査コア（audit/ と pipeline/ を備えたスキル）を解決できなかった。\n"
         "本スキルはコアを複製せず参照する設計のため、コアが無いと監査を実行できない。\n"
         + ("試した候補:\n" + "\n".join(tried) + "\n" if tried else "")
-        + f"兄弟ディレクトリ（{os.path.dirname(HERE)}）にも該当が無い。\n"
-        "対処: config.yaml の core_skill_path を実在するコアへ向けるか、"
+        + f"兄弟ディレクトリ（{os.path.dirname(HERE)}）にも該当が無く、"
+        f"同梱コア（{VENDORED_CORE}）も存在しないか不完全である。\n"
+        "対処: `python3 sync_core.py --source <原本>` で同梱し直すか、"
+        "config.yaml の core_skill_path を実在するコアへ向けるか、"
         "環境変数 AUTO_PAPER_CORE を設定すること。"
     )
 
