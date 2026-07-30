@@ -1,0 +1,18 @@
+{
+  "domain": "general",
+  "label": "汎用（業務・経済・教育・運用ログ等、任意ドメインの表形式データ）",
+  "notes": [
+    "既定の参照値を持たないドメイン。値域も単位も研究者が宣言する以外に決めようがない。",
+    "空であることは『チェックしない』という意味ではない。値域・単位の宣言が供給されない限り",
+    "check D / check U は PASS を出さず INCOMPLETE として人間に surface される（fail-closed）。",
+    "『臨床でないから値域チェックは不要』という運用に流れないこと。年齢999・売上が負・",
+    "在庫がマイナスといった『ありえない値』は臨床同様に存在し、むしろ業務データの方が多い。",
+    "SAP（工程1）で impossible_ranges / plausible_ranges を宣言すれば、臨床と同じ強度で",
+    "決定的に照合される。宣言はドメイン非依存の仕組みである。"
+  ],
+  "impossible_ranges": {},
+  "plausible_ranges": {},
+  "plausible_by_unit": {},
+  "censoring_hint": "上位打ち切り（所得のトップコーディング『1000万円以上』）、下限打ち切り（'<1'）、丸め済み区間が典型。",
+  "clinical_checks_applicable": false
+}

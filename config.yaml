@@ -1,0 +1,59 @@
+{
+  "_comment": [
+    "auto-paper の配線。中身は JSON（コア側 config.yaml と同じ流儀）。",
+    "本スキルは監査コア(audit/ と pipeline/)を複製せず、別スキルが保持する実装を参照する。",
+    "core_skill_path が null のとき、コアは名前ではなく構造で自動探索される",
+    "（skills ディレクトリ内で audit/tier1/runner.py 等を備えたディレクトリ）。",
+    "候補が複数ある場合は曖昧なので自動選択せず失敗するため、そのときだけ明示指定する。",
+    "相対パス・絶対パス・~ 展開のいずれでもよい。",
+    "raw_data_dir / output_root は特定研究に紐づかない。実行時に run ごとに指定する。"
+  ],
+  "core_skill_path": null,
+
+  "domain": null,
+  "_domain_comment": [
+    "clinical | survey | general のいずれかを run ごとに宣言する。",
+    "既定を置かない（暗黙に general へ倒すと値域未照合に気づけないため）。",
+    "ドメインは参照データ（値域・単位の基準）の選択にのみ用いられ、",
+    "チェック集合は全ドメインで同一である。"
+  ],
+
+  "raw_data_dir": "",
+  "output_root": "",
+
+  "models": {
+    "design": "claude",
+    "variables": "claude",
+    "analysis": "claude",
+    "writing": "claude",
+    "audit_critical_primary": "codex",
+    "audit_critical_secondary": "gemini",
+    "audit_tiebreak": "fable",
+    "negation": "claude",
+    "adjudicator": "claude"
+  },
+  "model_pool": ["codex", "gemini", "fable", "opus", "local"],
+  "audit_role_fallbacks": {
+    "critical_primary": ["codex", "gemini", "opus", "local"],
+    "critical_secondary": ["gemini", "opus", "local"],
+    "tiebreak": ["fable", "opus", "local"]
+  },
+
+  "gate_thresholds": {
+    "g15_log_ratio": 0.1823215567939546,
+    "g15_diff_rel": 0.2,
+    "g15_diff_se_mult": 0.5,
+    "g15_n_pct": 0.05,
+    "alpha": 0.05,
+    "g15_effect_pct": 0.2
+  },
+
+  "profiles": {
+    "default": {
+      "primary_source": "data_profile",
+      "agents_dir": "agents",
+      "_checks_comment": "この checks は run_audit.py が実際に読む。ここに載っていて finding も coverage も出なかったチェックは『入力未供給で未実行』として INCOMPLETE 報告される。",
+      "checks": ["A", "B", "D", "E", "G", "H", "I", "J", "K", "L", "M", "O", "P", "Q", "R", "S", "T", "U", "W"]
+    }
+  }
+}
