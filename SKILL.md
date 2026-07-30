@@ -75,9 +75,21 @@ description: 任意ドメインの表形式データ（CSV/TSV/Excel 由来の�
 | 6 | 自己修復（stage-aware 巻き戻し） | — | コーディング変更は G1 再通過 |
 | 7 | 最終判定 | — | **G2**（人間） |
 
-工程1〜4のプロンプトは `agents/01..04_*.md`（本スキル）。監査系プロンプト（`05_audit.md` / `negation.md` / `adjudicator.md`）と 3層監査の機構はコア側を共有する。
+全工程のプロンプトは本スキルが持つ（`agents/01..05_*.md` / `negation.md` / `adjudicator.md`）。Tier2/3 判定ルーブリックは `references/judgment_checklists/*.md`、文体辞書は `references/style_lexicon.md`。**単体 clone でも全て揃う。**
 
-**既知の重複**: コア側にも同目的の工程プロンプト一式（`agents/generic/01..04_*.md`）が存在する。監査コードの非複製は守っているが、エージェント定義はこの1点だけ2系統が併存しており、放置するとドリフトする。汎用 run の正は本スキルの `agents/` 側とする。非干渉モデル・入力契約・自己修復の詳細はコアの `SKILL.md` §1〜§7 および `references/DESIGN.md` を参照。
+### Tier2/3（Fable・Sol）は「プロンプト駆動」であってスクリプトではない
+
+`run_audit.py` が自動実行するのは **Tier1（決定的チェック19件）だけ**である。Tier2/3 は統括（＝Claude）が `agents/05_audit.md` に従って監査者モデルを**自分で起動する**運用であり、ボタン一つで走るものではない。
+
+`vendor/core/audit/external/` が提供するのは verdict の検証・COI 行列・集約・否定検査・裁定といった**判定ロジック**で、モデルを起動する runner は呼び出し側が注入する設計（`callers.py` / `availability.py` はいずれも runner / prober を引数で受け取る）。これは元スキルと同じ構造である。
+
+| 役割 | 既定モデル | 備考 |
+|---|---|---|
+| `audit_critical_primary` | codex（**Sol**） | クリティカル監査の主軸 |
+| `audit_critical_secondary` | gemini | 独立第二票 |
+| `audit_tiebreak` | fable（**Fable**） | Claude 系列のため、生成物が Claude 製ならクリティカル一次監査から除外され、**不一致時の第三票としてのみ**働く |
+
+**既知の重複**: コア側にも同目的の工程1〜4プロンプト（`agents/generic/01..04_*.md`）が存在する。監査コードの非複製は守っているが、エージェント定義は2系統が併存しており放置するとドリフトする。汎用 run の正は本スキルの `agents/` 側とする。
 
 ## 4. 使い方
 
