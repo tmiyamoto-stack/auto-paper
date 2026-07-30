@@ -82,6 +82,80 @@ python3 run_audit.py --run-dir <run> --domain clinical --data-csv data.csv --jso
 
 ---
 
+## 他の人に渡すときのプロンプト
+
+そのままコピーして使える。セットアップは clone 1行だけで、別途の準備は要らない。
+
+```bash
+git clone https://github.com/tmiyamoto-stack/auto-paper.git ~/.claude/skills/auto-paper
+```
+
+### A. 監査だけ回す（最頻用）
+
+```
+auto-paper スキルで解析成果物を監査してください。
+
+  cd ~/.claude/skills/auto-paper
+  python3 run_audit.py --run-dir <成果物ディレクトリ> --domain general --data-csv <CSV> --json findings.json
+
+- domain は clinical / survey / general から必ず明示（省略すると exit 2 で止まる）
+- 終了コードを区別して報告: 0=指摘なし / 1=FAIL・INCOMPLETE あり / 2=監査を実行できなかった
+- 「未実行チェック（入力未供給）」は合格ではなく「そのチェックが走っていない」という意味。
+  何を用意すれば走るかを出力から拾って一覧にしてください。
+```
+
+### B. データから一式作る（RQ → ドラフト）
+
+```
+auto-paper スキルで、下記データから論文/レポートのドラフトを作ってください。
+
+- データ: <CSVパス>
+- リサーチクエスチョン: <問い>
+- ドメイン: clinical / survey / general
+
+~/.claude/skills/auto-paper/agents/ の工程プロンプトに従って進めてください。
+
+  工程1 設計 → 00_spec/sap.md と sap_ranges.json
+        値域(impossible_ranges/plausible_ranges)と単位を必ず宣言すること。
+        宣言しないと check D/U が走らず「未実行」で残ります。
+  ★G0 私の承認を取る（承認なしに工程2へ進まない）
+  工程2 変数 → data_profile.json と variable_codebook.json
+        センチネル候補は必ず treat_as_missing に宣言し、実数値を割り当てない。
+        可能なら user_dictionary.json も書く（検出が INCOMPLETE→確定FAIL に格上げされる）
+  ★G1 私の承認を取る
+  工程3 分析 → results.json / flow.json / methods_claims.json / code_filters.json
+  工程4 執筆 → 数値は全てプレースホルダ（手書き数値は禁止）
+  工程5 監査 → run_audit.py を実走し、終了コードごと報告
+
+G0 と G1 は人間の承認ゲートです。そこで必ず止まってください。
+```
+
+### C. Tier2/3（Sol・Fable による外部監査）まで回す
+
+```
+Tier1 の結果を受けて、agents/05_audit.md に従い Tier2/3 監査を実施してください。
+
+- クリティカル項目の一次監査は Codex(Sol)。第二票は Gemini。
+- Fable は Claude 系列なので、成果物が Claude 製である限りクリティカル一次監査から
+  除外し、Sol と第二票が割れたときの第三票(tiebreak)としてのみ使うこと。
+- 監査者には生成経緯を渡さず、findings と一次証拠のみを渡す（盲検）。
+- 判定は references/judgment_checklists/*.md のルーブリックに従い、
+  各観点を PASS/REVISE/INCOMPLETE で構造化して返させる。
+- Tier1 の「未実行チェック」一覧を Tier2 判定者へ明示的に引き渡す。
+- クリティカルに FAIL か INCOMPLETE が一票でもあれば ESCALATE_HUMAN。統括は覆さない。
+```
+
+### 相手に必ず伝えること
+
+- **exit 1 が通常。** 入力を揃えるまで未実行チェックが INCOMPLETE で残るため。exit 0 は「全チェックが走って指摘ゼロ」。
+- **exit 2 は不合格ではなく「監査が動かなかった」。** 混同すると設定ミスを検出結果と読み違える。
+- **Tier2/3 は自動では走らない。** `run_audit.py` が回すのは Tier1 のみで、Sol/Fable の起動は統括（Claude）が手順書に従って行う。
+- **英語原稿は出ない。** 翻訳・英文校正は工程外。
+- **check A には偽陰性リスクがある。** 一次ソースが自動プロファイル（ヒューリスティック）なので、取りこぼしの最終防波堤は G1 の人間確認。「機械保証済み」と読ませない。
+- **数値の再現保証は未実装。** 保証は「原稿の数値が `results.json` と一致すること」まで。
+
+---
+
 ## ドメインの扱い
 
 `domain` は `clinical` / `survey` / `general` を run ごとに**必ず宣言**する（既定値なし。暗黙に `general` へ倒すと「値域を照合しなかった」ことに気づけないため）。
