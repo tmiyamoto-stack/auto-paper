@@ -70,17 +70,22 @@ description: 任意ドメインの表形式データ（CSV/TSV/Excel 由来の�
 | 1 | 設計（RQ→PECO・デザイン・SAP） | `00_spec/design_protocol.md`, `sap.md`, `sap_ranges.json` | **G0**（人間） |
 | 2 | 変数（プロファイル・コーディング・センチネル隔離） | `01_data/data_profile.json`, `variable_codebook.json`, `user_dictionary.json` | **G1**（人間） |
 | 3 | 分析（SAP 実行） | `03_results/results.json`, `flow.json`, `methods_claims.json`, `code_filters.json` | — |
+| 3b | **文献**（実在確認した先行研究） | `03_results/bibliography.json` | — |
 | 4 | 執筆（英語・プレースホルダ原稿） | `04_manuscript/manuscript_en.md` | — |
-| 4b | **差し込み**（`render_manuscript.py`） | `04_manuscript/manuscript_v1_en.md`＝投稿用英語稿 | — |
-| 5 | 監査（Tier1/2/3） | 監査レポート | **G1.5**（閾値超過時） |
+| 4b | **差し込み**（`render_manuscript.py`） | `04_manuscript/manuscript_v1_en.md` | — |
+| 4c | **英文校閲**（`check_copyedit.py` が数値不変を保証） | `04_manuscript/manuscript_final_en.md`＝投稿用英語稿 | — |
+| 5 | 監査 Tier1（`run_audit.py`） | findings / coverage | — |
+| 5b | 監査 Tier2/3（`run_tier23.py`＝Sol・Gemini を実起動） | `05_audit/tier23_report.json` | **G1.5**（閾値超過時） |
 | 6 | 自己修復（stage-aware 巻き戻し） | — | コーディング変更は G1 再通過 |
 | 7 | 最終判定 | — | **G2**（人間） |
 
 全工程のプロンプトは本スキルが持つ（`agents/01..05_*.md` / `negation.md` / `adjudicator.md`）。Tier2/3 判定ルーブリックは `references/judgment_checklists/*.md`、文体辞書は `references/style_lexicon.md`。**単体 clone でも全て揃う。**
 
-### Tier2/3（Fable・Sol）は「プロンプト駆動」であってスクリプトではない
+### Tier2/3（Sol・Gemini・Fable）の起動
 
-`run_audit.py` が自動実行するのは **Tier1（決定的チェック19件）だけ**である。Tier2/3 は統括（＝Claude）が `agents/05_audit.md` に従って監査者モデルを**自分で起動する**運用であり、ボタン一つで走るものではない。
+**`run_tier23.py` が Tier2/3 を実起動する。** COI 除外は `matrix.select_auditors` に委ね（本スキルは選定ロジックを二重実装しない）、集約は `aggregate_finding`、裁定は `adjudicate` を使う。
+
+ただし **CLI を持つモデルだけが自動起動できる**。codex(Sol) と gemini は CLI があるので直接起動するが、**Fable は CLI を持たず統括が Agent 経由でしか呼べない**。Fable が監査者に選ばれた場合、既定ではその票を INCOMPLETE として計上する（黙って人数を減らして「合意」にしない）。統括が Agent で verdict を得たら `--inject fable=verdicts.json` で正規の一票として参加させられる。
 
 `vendor/core/audit/external/` が提供するのは verdict の検証・COI 行列・集約・否定検査・裁定といった**判定ロジック**で、モデルを起動する runner は呼び出し側が注入する設計（`callers.py` / `availability.py` はいずれも runner / prober を引数で受け取る）。これは元スキルと同じ構造である。
 

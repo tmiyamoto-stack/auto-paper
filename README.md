@@ -112,12 +112,20 @@ auto-paper スキルで、下記データから英語の論文原稿を作って
   ★G1 私の承認を取る
   工程3 分析   → results.json / flow.json / methods_claims.json / code_filters.json
                  原稿で使う数値は全て results.json に出すこと（無い数値は原稿に書けない）。
+  工程3b 文献  → 03_results/bibliography.json
+                 記憶で書かず、必ず検索してDOI/PMIDから書誌を引き直して実在確認する。
   工程4 執筆   → 04_manuscript/manuscript_en.md（英語・数値は全てプレースホルダ）
                  templates/manuscript_en.md を骨格に使う。手書き数値は禁止。
   工程4b 差込  → python3 render_manuscript.py --run-dir <run> --limits '{"body":4000,"abstract":250}'
                  未解決プレースホルダがあれば exit 2 で原稿は出ない。工程3か原稿側を直す。
+  工程4c 校閲  → python3 check_copyedit.py --before ..._v1_en.md --after ..._final_en.md
+                 文章だけ直す。数値・引用番号・見出し・DOIを変えたら exit 1 で差し戻し。
   工程5 監査   → python3 run_audit.py --run-dir <run> --domain <domain> --data-csv <CSV> --json findings.json
+                 python3 check_citations.py --run-dir <run>
                  終了コードを区別して報告（0/1/2）。未実行チェックは必ず一覧化する。
+  工程5b Tier2/3 → python3 run_tier23.py --run-dir <run> --findings findings.json
+                 Sol・Gemini を実起動して独立監査。Fable が選ばれたら Agent で呼んで
+                 --inject fable=verdicts.json で渡す。
   工程6 自己修復 → クリティカルFAILは最早影響工程へ巻き戻す。修正方向は常にSAPへ収束。
                  コーディング変更なら G1 を再通過。効果推定値が実質変化したら ★G1.5 で私に確認。
   工程7 ★G2   → 投稿可否は私が判断する。あなたは判断を代行しない。
@@ -165,7 +173,7 @@ auto-paper スキルで解析成果物を監査してください。
 - **exit 1 が通常。** 入力を揃えるまで未実行チェックが INCOMPLETE で残るため。exit 0 は「全チェックが走って指摘ゼロ」。
 - **exit 2 は不合格ではなく「監査が動かなかった」。** 混同すると設定ミスを検出結果と読み違える。
 - **Tier2/3 は自動では走らない。** `run_audit.py` が回すのは Tier1 のみで、Sol/Fable の起動は統括（Claude）が手順書に従って行う。
-- **英語稿は出るが、英文校閲は工程外。** ネイティブチェックは人手で残る。
+- **英文校閲は LLM による。** 数値が壊れていないことはコードが保証するが、ネイティブ校閲証明の代わりにはならない。
 - **check A には偽陰性リスクがある。** 一次ソースが自動プロファイル（ヒューリスティック）なので、取りこぼしの最終防波堤は G1 の人間確認。「機械保証済み」と読ませない。
 - **数値の再現保証は未実装。** 保証は「原稿の数値が `results.json` と一致すること」まで。
 
